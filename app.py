@@ -1,7 +1,7 @@
 import streamlit as st
 import anthropic
 import json
-import pdfplumber
+import base64
 
 st.set_page_config(page_title="GCA Extraction Agent", page_icon="⚡", layout="centered")
 
@@ -61,20 +61,9 @@ injection_capacity, consumption_capacity, grid_voltage, inverters,
 reactive_energy_requirements, plant_substation, grid_substation, connection_works,
 equipment_plant_substation, hv_protection_category, hz_filter, downtime, other,
 total_costs_excl_vat, quote_part_excl_vat, timing.
-Write all values in English. If a field is not found, use exactly: "Info not found".
-"""
+Write all values in English. If a field is not found, use exactly: "Info not found"."""
 
 uploaded = st.file_uploader("Drop your GCA PDF here", type="pdf", label_visibility="collapsed")
-
-def extract_text_from_pdf(file) -> str:
-    """Extract all text from a PDF using pdfplumber."""
-    all_text = []
-    with pdfplumber.open(file) as pdf:
-        for page in pdf.pages:
-            text = page.extract_text()
-            if text:
-                all_text.append(text)
-    return "\n".join(all_text)
 
 if uploaded:
     st.info(f"📄 **{uploaded.name}** · {uploaded.size // 1024} KB")
@@ -85,24 +74,20 @@ if uploaded:
     if st.button("⚡  Extract Data", use_container_width=True, type="primary"):
         with st.spinner("Reading document and extracting data…"):
             try:
-                pdf_text = extract_text_from_pdf(uploaded)
-                if not pdf_text.strip():
-                    st.error("❌ No text could be extracted from the PDF.")
-                else:
-                    client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
-                    resp = client.messages.create(
-                        model="claude-sonnet-4-20250514",
-                        messages=[
-                            {"role": "system", "content": SYSTEM_PROMPT},
-                            {"role": "user", "content": pdf_text + "\n\nExtract all fields and return as JSON."}
-                        ],
-                        max_tokens=1500
-                    )
-                    raw = resp.content[0].text.strip()
-                    # Clean up JSON if Claude added extra formatting
-                    raw = raw.replace("```json", "").replace("```", "").strip()
-                    st.session_state.data = json.loads(raw)
-                    st.rerun()
+                b64 = base64.standard_b64encode(uploaded.read()).decode()
+                client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+                resp = client.messages.create(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=1500,
+                    messages=[{"role": "user", "content": [
+                        {"type": "text", "text": SYSTEM_PROMPT},
+                        {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": b64}},
+                        {"type": "text", "text": "Extract all fields and return as JSON."}
+                    ]}]
+                )
+                raw = resp.content[0].text.replace("```json","").replace("```","").strip()
+                st.session_state.data = json.loads(raw)
+                st.rerun()
             except Exception as e:
                 st.error(f"❌ Extraction failed: {e}")
 
