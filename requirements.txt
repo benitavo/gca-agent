@@ -1,2 +1,5 @@
-anthropic
 streamlit
+anthropic
+pdfplumber
+pillow
+pdf2image
