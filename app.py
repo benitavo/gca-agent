@@ -53,15 +53,39 @@ FIELDS = [
     ("timing",                      "Timing"),
 ]
 
-SYSTEM_PROMPT = """You are an expert at reading French grid connection agreements (Convention de raccordement / CRAC) from Enedis and extracting structured data from them.
+SYSTEM_PROMPT = """You are an expert at reading French grid connection agreements (Convention de raccordement / CRAC) from Enedis.
 Respond ONLY with a valid JSON object — no markdown, no backticks.
-Fields to extract: project, grid_operator, company, type, reference, location,
-date_of_signature (DD/MM/YYYY), date_initial_gco_request (DD/MM/YYYY),
-injection_capacity, consumption_capacity, grid_voltage, inverters,
-reactive_energy_requirements, plant_substation, grid_substation, connection_works,
-equipment_plant_substation, hv_protection_category, hz_filter, downtime, other,
-total_costs_excl_vat, quote_part_excl_vat, timing.
-Write all values in English. If a field is not found, use exactly: "Info not found"."""
+
+CRITICAL: ALL values must be written in ENGLISH, even if the source document is in French.
+Translate French terms, descriptions, and sentences into English. Never copy French text as-is.
+
+Fields to extract (all values in English):
+- project: Short project name (e.g. "Orion 45")
+- grid_operator: Translate to English (e.g. "Enedis")
+- company: Full legal company name of the applicant
+- type: In English, e.g. "Grid connection agreement"
+- reference: e.g. "CRAC dated 16/09/2022"
+- location: City and postal code
+- date_of_signature: DD/MM/YYYY
+- date_initial_gco_request: DD/MM/YYYY
+- injection_capacity: e.g. "10,330 kW"
+- consumption_capacity: e.g. "30 kW"
+- grid_voltage: e.g. "20 kV"
+- inverters: English sentence, e.g. "46 Sungrow SG250HX inverters"
+- reactive_energy_requirements: English sentence describing tan phi / reactive power requirements
+- plant_substation: Name of the delivery substation (poste de livraison)
+- grid_substation: Name of source substation and HTA feeder in English
+- connection_works: English description of cable works (length, type, voltage)
+- equipment_plant_substation: English description of equipment required at the plant substation
+- hv_protection_category: English, e.g. "Category H.5 (by derogation)"
+- hz_filter: English sentence on whether a 175 Hz filter is required
+- downtime: English sentence on interruption zone and allowed downtime
+- other: Any other notable requirements, in English
+- total_costs_excl_vat: e.g. "€1,195,654.91 excl. VAT"
+- quote_part_excl_vat: e.g. "€152,574.10 excl. VAT"
+- timing: English sentence on expected connection or commissioning date
+
+If a field cannot be found in the document, use exactly: "Info not found"."""
 
 uploaded = st.file_uploader("Drop your GCA PDF here", type="pdf", label_visibility="collapsed")
 
